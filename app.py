@@ -10,6 +10,8 @@ from utils import (
     detect_anomalies, 
     create_anomaly_chart,
     create_advanced_anomaly_analysis,
+    create_anomaly_correlation_analysis,
+    calculate_anomaly_risk_score,
     generate_anomaly_insights,
     validate_tax_invoice_data
 )
@@ -219,13 +221,13 @@ def main():
             """)
         
         with tab3:
-            st.header("🔍 이상치 탐지")
-            st.write("공급가액과 세액 기준으로 이상치를 탐지합니다.")
+            st.header("🔍 이상치 탐지 및 심화 분석")
+            st.write("공급가액과 세액 기준으로 이상치를 탐지하고 심화 분석을 제공합니다.")
             
             # 이상치 탐지
             df_with_anomalies, anomaly_labels = detect_anomalies(df, contamination)
             
-            # 이상치 차트
+            # 기본 이상치 차트
             anomaly_fig = create_anomaly_chart(df_with_anomalies)
             st.plotly_chart(anomaly_fig, use_container_width=True)
             
@@ -245,8 +247,84 @@ def main():
             with col3:
                 st.metric("정상 거래", f"{total_count - anomaly_count:,}건")
             
-            # 이상치 상세 정보
+            # 심화 분석
             if anomaly_count > 0:
+                st.markdown("---")
+                st.subheader("📊 심화 분석")
+                
+                # 심화 분석 데이터 생성
+                anomaly_stats, normal_stats, fig_type_dist, fig_month_dist = create_advanced_anomaly_analysis(df_with_anomalies)
+                
+                # 통계 정보 표시
+                col1, col2 = st.columns(2)
+                
+                with col1:
+                    st.subheader("📈 이상치 통계")
+                    if anomaly_stats:
+                        st.metric("평균 공급가액", f"{anomaly_stats['이상치_평균_공급가액']:,.0f}원")
+                        st.metric("평균 세액", f"{anomaly_stats['이상치_평균_세액']:,.0f}원")
+                        st.metric("최대 공급가액", f"{anomaly_stats['이상치_최대_공급가액']:,.0f}원")
+                        st.metric("공급가액 표준편차", f"{anomaly_stats['이상치_공급가액_표준편차']:,.0f}원")
+                
+                with col2:
+                    st.subheader("📊 정상 거래 통계")
+                    if normal_stats:
+                        st.metric("평균 공급가액", f"{normal_stats['정상_평균_공급가액']:,.0f}원")
+                        st.metric("평균 세액", f"{normal_stats['정상_평균_세액']:,.0f}원")
+                        st.metric("공급가액 표준편차", f"{normal_stats['정상_공급가액_표준편차']:,.0f}원")
+                        st.metric("세액 표준편차", f"{normal_stats['정상_세액_표준편차']:,.0f}원")
+                
+                # 차트 표시
+                col1, col2 = st.columns(2)
+                
+                with col1:
+                    st.plotly_chart(fig_type_dist, use_container_width=True)
+                
+                with col2:
+                    st.plotly_chart(fig_month_dist, use_container_width=True)
+                
+                # 상관관계 분석
+                st.subheader("📊 상관관계 분석")
+                correlation_fig = create_anomaly_correlation_analysis(df_with_anomalies)
+                st.plotly_chart(correlation_fig, use_container_width=True)
+                
+                # 위험도 점수 계산
+                risk_score, risk_level = calculate_anomaly_risk_score(df_with_anomalies)
+                
+                # 위험도 표시
+                st.subheader("⚠️ 이상치 위험도 평가")
+                col1, col2, col3 = st.columns(3)
+                
+                with col1:
+                    st.metric("위험도 점수", f"{risk_score:.1f}/100")
+                
+                with col2:
+                    if risk_level == "낮음":
+                        st.success(f"위험도 등급: {risk_level}")
+                    elif risk_level == "보통":
+                        st.warning(f"위험도 등급: {risk_level}")
+                    elif risk_level == "높음":
+                        st.error(f"위험도 등급: {risk_level}")
+                    else:
+                        st.error(f"위험도 등급: {risk_level}")
+                
+                with col3:
+                    if risk_score > 60:
+                        st.error("🔴 높은 위험도 - 즉시 검토 필요")
+                    elif risk_score > 30:
+                        st.warning("🟡 보통 위험도 - 주기적 모니터링 권장")
+                    else:
+                        st.success("🟢 낮은 위험도 - 정상 상태")
+                
+                # 인사이트 생성
+                insights = generate_anomaly_insights(df_with_anomalies, contamination)
+                
+                if insights:
+                    st.subheader("💡 분석 인사이트")
+                    for insight in insights:
+                        st.info(insight)
+                
+                # 이상치 상세 정보
                 st.subheader("🚨 이상치 상세 정보")
                 anomaly_data = df_with_anomalies[df_with_anomalies['이상치']].copy()
                 anomaly_data = anomaly_data[['작성월', '거래유형', '발행형태', '공급가액', '세액']]
@@ -256,10 +334,28 @@ def main():
             
             # 해석 텍스트
             st.markdown("""
-            **📊 분석 해석:**
-            - **이상치**: 일반적인 패턴과 크게 벗어난 거래를 의미합니다
-            - 높은 공급가액이나 세액을 가진 거래가 이상치로 탐지될 수 있습니다
-            - 이상치는 오류 데이터이거나 특별한 거래일 수 있으므로 개별 검토가 필요합니다
+            **📊 심화 분석 해석:**
+            
+            **이상치 탐지 원리:**
+            - Isolation Forest 알고리즘을 사용하여 공급가액과 세액의 패턴을 분석
+            - 일반적인 거래 패턴과 크게 벗어난 거래를 이상치로 탐지
+            
+            **분석 지표:**
+            - **이상치 비율**: 전체 거래 중 이상치로 탐지된 비율
+            - **평균 공급가액/세액**: 이상치와 정상 거래의 평균값 비교
+            - **표준편차**: 데이터의 분산 정도를 나타내는 지표
+            - **위험도 점수**: 이상치의 심각성을 종합적으로 평가한 점수 (0-100)
+            
+            **상관관계 분석:**
+            - **산점도**: 공급가액과 세액의 관계를 시각적으로 분석
+            - **분포 비교**: 정상 거래와 이상치의 분포 차이를 히스토그램으로 비교
+            - **패턴 분석**: 이상치가 특정 패턴을 보이는지 분석
+            
+            **실무 활용:**
+            - 높은 위험도 점수: 즉시 검토가 필요한 상황
+            - 특정 월의 이상치 집중: 해당 시기의 특별한 거래 패턴 분석
+            - 거래유형별 이상치 분포: 매출/매입 거래의 특성 차이 분석
+            - 상관관계 분석: 이상치의 특성을 더 정확히 파악
             """)
     
     else:
