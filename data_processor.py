@@ -179,42 +179,4 @@ def create_realistic_tax_data_from_financial_statement(df):
                 '세액': tax_amount
             })
     
-    return pd.DataFrame(data)
-
-def validate_tax_invoice_data(df):
-    """
-    세금계산서 데이터 유효성 검증
-    """
-    required_columns = ['작성월', '거래유형', '발행형태', '공급가액', '세액']
-    
-    # 필수 컬럼 확인
-    missing_columns = [col for col in required_columns if col not in df.columns]
-    if missing_columns:
-        st.error(f"필수 컬럼이 누락되었습니다: {missing_columns}")
-        return False
-    
-    # 데이터 타입 확인
-    if not pd.api.types.is_numeric_dtype(df['공급가액']):
-        st.error("공급가액은 숫자 형식이어야 합니다.")
-        return False
-    
-    if not pd.api.types.is_numeric_dtype(df['세액']):
-        st.error("세액은 숫자 형식이어야 합니다.")
-        return False
-    
-    # 거래유형 값 확인
-    valid_types = ['매출', '매입']
-    invalid_types = df[~df['거래유형'].isin(valid_types)]['거래유형'].unique()
-    if len(invalid_types) > 0:
-        st.error(f"유효하지 않은 거래유형: {invalid_types}")
-        return False
-    
-    # 발행형태 값 확인
-    valid_forms = ['전자', '종이']
-    invalid_forms = df[~df['발행형태'].isin(valid_forms)]['발행형태'].unique()
-    if len(invalid_forms) > 0:
-        st.error(f"유효하지 않은 발행형태: {invalid_forms}")
-        return False
-    
-    st.success("데이터 유효성 검증 완료!")
-    return True 
+    return pd.DataFrame(data) 
