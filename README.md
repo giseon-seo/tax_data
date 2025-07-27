@@ -38,11 +38,14 @@
 ```
 tax_data/
 ├── app.py              # 메인 Streamlit 애플리케이션
-├── utils.py            # 데이터 처리 및 분석 유틸리티
+├── utils.py            # 데이터 처리 및 시각화 유틸리티
+├── data_processor.py   # TASIS 데이터 처리 전용 모듈
+├── fix_encoding.py     # CSV 인코딩 수정 스크립트
 ├── requirements.txt    # Python 패키지 의존성
 ├── README.md          # 프로젝트 문서
-└── data/              # 데이터 파일 (선택사항)
-    └── sample_data.csv
+├── .gitignore         # Git 무시 파일 설정
+├── sample_data.csv    # 샘플 데이터
+└── fixed_tasis_data.csv # 수정된 TASIS 데이터
 ```
 
 ## 🚀 설치 및 실행
@@ -66,7 +69,7 @@ pip install -r requirements.txt
 
 ### 4. 애플리케이션 실행
 ```bash
-streamlit run app.py
+python3 -m streamlit run app.py
 ```
 
 ## 📊 데이터 형식
@@ -78,6 +81,13 @@ streamlit run app.py
 - **발행형태**: 전자 또는 종이
 - **공급가액**: 숫자 형식
 - **세액**: 숫자 형식
+
+### 🛠️ TASIS 데이터 처리
+
+국세청 TASIS 시스템의 재무제표 데이터도 자동으로 처리할 수 있습니다:
+- 다양한 인코딩 지원 (UTF-8, CP949, EUC-KR 등)
+- 자동 인코딩 감지 및 수정
+- 재무제표 데이터를 세금계산서 형식으로 변환
 
 ## 🎨 대시보드 구성
 
