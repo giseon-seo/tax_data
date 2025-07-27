@@ -2,14 +2,13 @@ import pandas as pd
 import numpy as np
 import streamlit as st
 
-def process_tasis_data(file_path):
+def process_tasis_data(uploaded_file):
     """
     TASIS 시스템에서 제공하는 재무제표 데이터를 처리하는 함수
     """
     try:
-        # 파일을 바이너리로 읽기
-        with open(file_path, 'rb') as f:
-            raw_data = f.read()
+        # UploadedFile에서 바이트 데이터 읽기
+        raw_data = uploaded_file.read()
         
         # 여러 인코딩 시도
         encodings = ['utf-8', 'cp949', 'euc-kr', 'latin1', 'utf-8-sig']
@@ -30,9 +29,10 @@ def process_tasis_data(file_path):
                 continue
         
         if df is None:
-            # 마지막 시도: engine='python' 사용
+            # 마지막 시도: StringIO 사용
             try:
-                df = pd.read_csv(file_path, engine='python', encoding_errors='ignore')
+                uploaded_file.seek(0)  # 파일 포인터를 처음으로 되돌리기
+                df = pd.read_csv(uploaded_file, engine='python', encoding_errors='ignore')
                 st.success("Python 엔진으로 TASIS 데이터를 로드했습니다.")
             except Exception as e:
                 st.error(f"TASIS 데이터 로드 실패: {str(e)}")
