@@ -14,7 +14,10 @@ from utils import (
     create_monthly_comparison,
     create_highlight_analysis,
     create_advanced_statistics,
-    create_detailed_account_analysis
+    create_detailed_account_analysis,
+    create_clean_data_analysis,
+    create_clean_data_visualization,
+    create_data_quality_report
 )
 import data_processor
 
@@ -198,13 +201,14 @@ def main():
     ), unsafe_allow_html=True)
     
     # 탭 생성
-    tab1, tab2, tab3, tab4, tab5, tab6 = st.tabs([
+    tab1, tab2, tab3, tab4, tab5, tab6, tab7 = st.tabs([
         "📈 거래 추이 분석", 
         "🍰 유형별 분포 분석", 
         "📊 주요 계정과목 분석",
         "🔍 상세 계정과목 분석",
         "🎯 하이라이트 분석",
-        "🚨 이상치 탐지"
+        "🚨 이상치 탐지",
+        "✨ 데이터 품질 분석"
     ])
     
     with tab1:
@@ -393,6 +397,93 @@ def main():
         - **높은 공급가액/세액**: 대규모 거래나 특별한 거래일 수 있습니다
         - **낮은 공급가액/세액**: 소규모 거래나 오타일 수 있습니다
         - 민감도 슬라이더를 조정하여 이상치 탐지 기준을 변경할 수 있습니다
+        """)
+    
+    with tab7:
+        st.subheader("✨ 데이터 품질 분석")
+        
+        # 데이터 품질 분석
+        clean_stats, clean_summary, clean_detailed_stats = create_clean_data_analysis(df)
+        
+        if clean_stats:
+            # 데이터 품질 KPI
+            col1, col2, col3, col4 = st.columns(4)
+            
+            with col1:
+                st.metric(
+                    "원본 데이터", 
+                    f"{clean_stats['원본_데이터_수']:,}건",
+                    help="전체 데이터 수"
+                )
+            
+            with col2:
+                st.metric(
+                    "깨끗한 데이터", 
+                    f"{clean_stats['깨끗한_데이터_수']:,}건",
+                    f"{clean_stats['깨끗한_데이터_수'] - clean_stats['원본_데이터_수']:,}건",
+                    help="이상치와 결측치를 제거한 데이터"
+                )
+            
+            with col3:
+                st.metric(
+                    "데이터 품질", 
+                    f"{clean_stats['데이터_품질_비율']:.1f}%",
+                    help="깨끗한 데이터 비율"
+                )
+            
+            with col4:
+                st.metric(
+                    "제거된 데이터", 
+                    f"{clean_stats['제거된_데이터_수']:,}건",
+                    help="이상치와 결측치로 제거된 데이터"
+                )
+            
+            # 데이터 품질 시각화
+            quality_fig, distribution_fig = create_clean_data_visualization(df)
+            
+            col1, col2 = st.columns(2)
+            with col1:
+                st.plotly_chart(quality_fig, use_container_width=True)
+            with col2:
+                st.plotly_chart(distribution_fig, use_container_width=True)
+            
+            # 깨끗한 데이터 통계
+            if clean_summary is not None:
+                st.subheader("📋 깨끗한 데이터 요약 통계")
+                st.dataframe(clean_summary, use_container_width=True)
+                
+                # 상세 통계
+                if clean_detailed_stats:
+                    st.subheader("📊 깨끗한 데이터 상세 통계")
+                    
+                    col1, col2 = st.columns(2)
+                    
+                    with col1:
+                        st.write("**거래유형별 깨끗한 통계**")
+                        st.dataframe(clean_detailed_stats['거래유형_통계'], use_container_width=True)
+                    
+                    with col2:
+                        st.write("**발행형태별 깨끗한 통계**")
+                        st.dataframe(clean_detailed_stats['발행형태_통계'], use_container_width=True)
+                    
+                    st.write("**월별 깨끗한 통계**")
+                    st.dataframe(clean_detailed_stats['월별_통계'], use_container_width=True)
+            
+            # 데이터 품질 리포트
+            st.subheader("📄 데이터 품질 리포트")
+            quality_report = create_data_quality_report(df)
+            st.markdown(quality_report)
+            
+        else:
+            st.warning("데이터 품질 분석을 수행할 수 없습니다.")
+        
+        st.markdown("""
+        **📊 분석 해석:**
+        - **데이터 품질**: 이상치와 결측치를 제거한 깨끗한 데이터의 비율을 확인합니다
+        - **결측치 분석**: 각 컬럼별 결측치 현황을 파악하여 데이터 완성도를 평가합니다
+        - **이상치 분석**: IQR 방법을 사용하여 공급가액과 세액의 이상치를 탐지합니다
+        - **깨끗한 데이터 통계**: 이상치와 결측치를 제거한 후의 신뢰할 수 있는 통계를 제공합니다
+        - **데이터 품질 리포트**: 전체적인 데이터 품질 현황을 종합적으로 분석합니다
         """)
 
 if __name__ == "__main__":
