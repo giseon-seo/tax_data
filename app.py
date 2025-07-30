@@ -321,26 +321,32 @@ def main():
         # 주요 거래 상세 정보
         st.subheader("💎 주요 거래 상세 정보")
         
-        max_transaction = df.loc[df['공급가액'].idxmax()]
-        min_transaction = df.loc[df['공급가액'].idxmin()]
-        
-        col1, col2 = st.columns(2)
-        
-        with col1:
-            st.markdown("**🔥 최대 거래**")
-            st.write(f"공급가액: {max_transaction['공급가액']:,.0f}원")
-            st.write(f"세액: {max_transaction['세액']:,.0f}원")
-            st.write(f"거래유형: {max_transaction['거래유형']}")
-            st.write(f"발행형태: {max_transaction['발행형태']}")
-            st.write(f"작성월: {max_transaction['작성월']}")
-        
-        with col2:
-            st.markdown("**💎 최소 거래**")
-            st.write(f"공급가액: {min_transaction['공급가액']:,.0f}원")
-            st.write(f"세액: {min_transaction['세액']:,.0f}원")
-            st.write(f"거래유형: {min_transaction['거래유형']}")
-            st.write(f"발행형태: {min_transaction['발행형태']}")
-            st.write(f"작성월: {min_transaction['작성월']}")
+        try:
+            max_idx = df['공급가액'].idxmax()
+            min_idx = df['공급가액'].idxmin()
+            max_transaction = df.loc[max_idx]
+            min_transaction = df.loc[min_idx]
+            
+            col1, col2 = st.columns(2)
+            
+            with col1:
+                st.markdown("**🔥 최대 거래**")
+                st.write(f"공급가액: {max_transaction['공급가액']:,.0f}원")
+                st.write(f"세액: {max_transaction['세액']:,.0f}원")
+                st.write(f"거래유형: {max_transaction['거래유형']}")
+                st.write(f"발행형태: {max_transaction['발행형태']}")
+                st.write(f"작성월: {max_transaction['작성월']}")
+            
+            with col2:
+                st.markdown("**💎 최소 거래**")
+                st.write(f"공급가액: {min_transaction['공급가액']:,.0f}원")
+                st.write(f"세액: {min_transaction['세액']:,.0f}원")
+                st.write(f"거래유형: {min_transaction['거래유형']}")
+                st.write(f"발행형태: {min_transaction['발행형태']}")
+                st.write(f"작성월: {min_transaction['작성월']}")
+                
+        except Exception as e:
+            st.error(f"주요 거래 정보 표시 중 오류: {str(e)}")
         
         st.markdown("""
         **📊 분석 해석:**
