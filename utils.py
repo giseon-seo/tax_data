@@ -109,8 +109,11 @@ def create_sample_data():
         # 세액 계산 (10%)
         tax_amount = int(supply_amount * 0.1)
         
+        # numpy.datetime64를 pandas Timestamp로 변환
+        date_pd = pd.Timestamp(date)
+        
         data.append({
-            '작성월': date.strftime('%Y-%m'),
+            '작성월': date_pd.strftime('%Y-%m'),
             '거래유형': transaction_type,
             '발행형태': issuance_type,
             '공급가액': supply_amount,
@@ -166,6 +169,9 @@ def calculate_kpis(df):
         '총_매입': df[df['거래유형'] == '매입']['공급가액'].sum(),
         '총_비용': df[df['거래유형'] == '비용']['공급가액'].sum(),
         '총_수익': df[df['거래유형'] == '수익']['공급가액'].sum(),
+        '총_세액': df['세액'].sum(),
+        '평균_세액': df['세액'].mean(),
+        '거래_건수': len(df),
         '매출_건수': len(df[df['거래유형'] == '매출']),
         '매입_건수': len(df[df['거래유형'] == '매입']),
         '비용_건수': len(df[df['거래유형'] == '비용']),
