@@ -959,3 +959,239 @@ def create_data_quality_report(df):
             report.append(f"- **{idx}**: {row['count']:,}건, {row['sum']:,.0f}원, 평균 {row['mean']:,.0f}원")
     
     return "\n".join(report)
+
+def create_year_over_year_comparison(df):
+    """
+    전년 동기 대비 분석 차트 생성
+    """
+    if df is None or df.empty:
+        return go.Figure()
+    
+    # 현재 연도와 전년도 데이터 분리 (샘플 데이터 기준)
+    current_year = "2024"
+    previous_year = "2023"
+    
+    # 현재 연도 데이터
+    current_data = df[df['작성월'].str.startswith(current_year)]
+    # 전년도 데이터 (샘플로 생성)
+    previous_data = create_previous_year_data()
+    
+    # 월별 비교 데이터 생성
+    months = [f"{current_year}-{i:02d}" for i in range(1, 13)]
+    
+    current_monthly = current_data.groupby('작성월').agg({
+        '공급가액': 'sum',
+        '세액': 'sum',
+        '거래유형': 'count'
+    }).reset_index()
+    
+    previous_monthly = previous_data.groupby('작성월').agg({
+        '공급가액': 'sum',
+        '세액': 'sum',
+        '거래유형': 'count'
+    }).reset_index()
+    
+    # 차트 생성
+    fig = go.Figure()
+    
+    # 현재 연도 데이터
+    fig.add_trace(go.Scatter(
+        x=current_monthly['작성월'],
+        y=current_monthly['공급가액'],
+        mode='lines+markers',
+        name=f'{current_year} 공급가액',
+        line=dict(color='#1f77b4', width=3),
+        marker=dict(size=8)
+    ))
+    
+    # 전년도 데이터
+    fig.add_trace(go.Scatter(
+        x=previous_monthly['작성월'],
+        y=previous_monthly['공급가액'],
+        mode='lines+markers',
+        name=f'{previous_year} 공급가액',
+        line=dict(color='#ff7f0e', width=3, dash='dash'),
+        marker=dict(size=8)
+    ))
+    
+    fig.update_layout(
+        title=f'전년 동기 대비 공급가액 비교 ({previous_year} vs {current_year})',
+        xaxis_title='월',
+        yaxis_title='공급가액 (원)',
+        height=500,
+        hovermode='x unified'
+    )
+    
+    return fig
+
+def create_industry_comparison(df):
+    """
+    업종 평균과 비교 분석
+    """
+    if df is None or df.empty:
+        return go.Figure()
+    
+    # 현재 데이터 통계
+    current_stats = {
+        '평균_거래금액': df['공급가액'].mean(),
+        '총_거래금액': df['공급가액'].sum(),
+        '거래_건수': len(df),
+        '전자_발행_비율': (len(df[df['발행형태'] == '전자']) / len(df)) * 100
+    }
+    
+    # 업종 평균 (가상 데이터)
+    industry_averages = {
+        '소매업': {
+            '평균_거래금액': 1500000,
+            '총_거래금액': 18000000,
+            '거래_건수': 12,
+            '전자_발행_비율': 85
+        },
+        '제조업': {
+            '평균_거래금액': 2500000,
+            '총_거래금액': 30000000,
+            '거래_건수': 12,
+            '전자_발행_비율': 90
+        },
+        '서비스업': {
+            '평균_거래금액': 1200000,
+            '총_거래금액': 14400000,
+            '거래_건수': 12,
+            '전자_발행_비율': 75
+        }
+    }
+    
+    # 차트 생성
+    fig = go.Figure()
+    
+    metrics = ['평균_거래금액', '총_거래금액', '거래_건수', '전자_발행_비율']
+    categories = ['현재', '소매업 평균', '제조업 평균', '서비스업 평균']
+    
+    for i, metric in enumerate(metrics):
+        values = [current_stats[metric]]
+        for industry in ['소매업', '제조업', '서비스업']:
+            values.append(industry_averages[industry][metric])
+        
+        fig.add_trace(go.Bar(
+            name=metric.replace('_', ' '),
+            x=categories,
+            y=values,
+            text=[f'{v:,.0f}' if '비율' not in metric else f'{v:.1f}%' for v in values],
+            textposition='auto',
+        ))
+    
+    fig.update_layout(
+        title='업종 평균과 비교 분석',
+        xaxis_title='구분',
+        yaxis_title='수치',
+        height=500,
+        barmode='group'
+    )
+    
+    return fig
+
+def create_performance_metrics(df):
+    """
+    성과 지표 분석
+    """
+    if df is None or df.empty:
+        return go.Figure()
+    
+    # 성과 지표 계산
+    total_revenue = df[df['거래유형'] == '매출']['공급가액'].sum()
+    total_expense = df[df['거래유형'] == '매입']['공급가액'].sum()
+    total_cost = df[df['거래유형'] == '비용']['공급가액'].sum()
+    total_income = df[df['거래유형'] == '수익']['공급가액'].sum()
+    
+    # 수익성 지표
+    gross_profit = total_revenue - total_expense
+    net_profit = total_revenue + total_income - total_expense - total_cost
+    gross_margin = (gross_profit / total_revenue * 100) if total_revenue > 0 else 0
+    net_margin = (net_profit / total_revenue * 100) if total_revenue > 0 else 0
+    
+    # 효율성 지표
+    avg_transaction = df['공급가액'].mean()
+    transaction_volume = len(df)
+    electronic_ratio = (len(df[df['발행형태'] == '전자']) / len(df)) * 100
+    
+    # 지표 데이터
+    metrics = {
+        '총 매출': total_revenue,
+        '총 매입': total_expense,
+        '총 비용': total_cost,
+        '총 수익': total_income,
+        '매출총이익': gross_profit,
+        '순이익': net_profit,
+        '매출총이익률': gross_margin,
+        '순이익률': net_margin,
+        '평균 거래금액': avg_transaction,
+        '거래 건수': transaction_volume,
+        '전자 발행 비율': electronic_ratio
+    }
+    
+    # 차트 생성
+    fig = go.Figure()
+    
+    # 주요 지표들
+    key_metrics = ['총 매출', '총 매입', '매출총이익', '순이익']
+    values = [metrics[m] for m in key_metrics]
+    
+    fig.add_trace(go.Bar(
+        x=key_metrics,
+        y=values,
+        text=[f'{v:,.0f}원' for v in values],
+        textposition='auto',
+        marker_color=['#2E8B57', '#DC143C', '#FFD700', '#4169E1']
+    ))
+    
+    fig.update_layout(
+        title='주요 성과 지표',
+        xaxis_title='지표',
+        yaxis_title='금액 (원)',
+        height=400
+    )
+    
+    return fig, metrics
+
+def create_previous_year_data():
+    """
+    전년도 샘플 데이터 생성
+    """
+    np.random.seed(42)  # 재현성을 위한 시드 설정
+    
+    data = []
+    start_date = pd.Timestamp('2023-01-01')
+    end_date = pd.Timestamp('2023-12-31')
+    
+    # 2023년 데이터 생성
+    for _ in range(120):
+        date = start_date + pd.Timedelta(days=np.random.randint(0, 365))
+        transaction_type = np.random.choice(['매출', '매입', '비용', '수익'], p=[0.4, 0.3, 0.2, 0.1])
+        issuance_type = np.random.choice(['전자', '종이'], p=[0.8, 0.2])
+        
+        # 2023년은 2024년보다 약간 낮은 금액으로 설정
+        supply_amount = np.random.randint(500000, 3000000)
+        tax_amount = int(supply_amount * 0.1)
+        
+        # 계정과목 추가
+        if transaction_type == '매출':
+            account = np.random.choice(['상품매출', '서비스매출', '기타매출'])
+        elif transaction_type == '매입':
+            account = np.random.choice(['상품매입', '재료비', '기타매입'])
+        elif transaction_type == '비용':
+            account = np.random.choice(['인건비', '관리비', '마케팅비'])
+        else:  # 수익
+            account = np.random.choice(['이자수익', '배당수익', '기타수익'])
+        
+        # numpy.datetime64를 pandas Timestamp로 변환
+        date_pd = pd.Timestamp(date)
+        data.append({
+            '작성월': date_pd.strftime('%Y-%m'),
+            '거래유형': transaction_type,
+            '발행형태': issuance_type,
+            '공급가액': supply_amount,
+            '세액': tax_amount,
+            '계정과목': account
+        })
+    
+    return pd.DataFrame(data)

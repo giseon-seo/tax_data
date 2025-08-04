@@ -17,7 +17,10 @@ from utils import (
     create_detailed_account_analysis,
     create_clean_data_analysis,
     create_clean_data_visualization,
-    create_data_quality_report
+    create_data_quality_report,
+    create_year_over_year_comparison,
+    create_industry_comparison,
+    create_performance_metrics
 )
 import data_processor
 
@@ -201,14 +204,15 @@ def main():
     ), unsafe_allow_html=True)
     
     # 탭 생성
-    tab1, tab2, tab3, tab4, tab5, tab6, tab7 = st.tabs([
+    tab1, tab2, tab3, tab4, tab5, tab6, tab7, tab8 = st.tabs([
         "📈 거래 추이 분석", 
         "🍰 유형별 분포 분석", 
         "📊 주요 계정과목 분석",
         "🔍 상세 계정과목 분석",
         "🎯 하이라이트 분석",
         "🚨 이상치 탐지",
-        "✨ 데이터 품질 분석"
+        "✨ 데이터 품질 분석",
+        "📊 비교 분석"
     ])
     
     with tab1:
@@ -403,87 +407,78 @@ def main():
         st.subheader("✨ 데이터 품질 분석")
         
         # 데이터 품질 분석
-        clean_stats, clean_summary, clean_detailed_stats = create_clean_data_analysis(df)
+        clean_stats = create_clean_data_analysis(df)
+        clean_viz = create_clean_data_visualization(df)
+        quality_report = create_data_quality_report(df)
         
-        if clean_stats:
-            # 데이터 품질 KPI
-            col1, col2, col3, col4 = st.columns(4)
-            
-            with col1:
-                st.metric(
-                    "원본 데이터", 
-                    f"{clean_stats['원본_데이터_수']:,}건",
-                    help="전체 데이터 수"
-                )
-            
-            with col2:
-                st.metric(
-                    "깨끗한 데이터", 
-                    f"{clean_stats['깨끗한_데이터_수']:,}건",
-                    f"{clean_stats['깨끗한_데이터_수'] - clean_stats['원본_데이터_수']:,}건",
-                    help="이상치와 결측치를 제거한 데이터"
-                )
-            
-            with col3:
-                st.metric(
-                    "데이터 품질", 
-                    f"{clean_stats['데이터_품질_비율']:.1f}%",
-                    help="깨끗한 데이터 비율"
-                )
-            
-            with col4:
-                st.metric(
-                    "제거된 데이터", 
-                    f"{clean_stats['제거된_데이터_수']:,}건",
-                    help="이상치와 결측치로 제거된 데이터"
-                )
-            
-            # 데이터 품질 시각화
-            quality_fig, distribution_fig = create_clean_data_visualization(df)
-            
-            col1, col2 = st.columns(2)
-            with col1:
-                st.plotly_chart(quality_fig, use_container_width=True)
-            with col2:
-                st.plotly_chart(distribution_fig, use_container_width=True)
-            
-            # 깨끗한 데이터 통계
-            if clean_summary is not None:
-                st.subheader("📋 깨끗한 데이터 요약 통계")
-                st.dataframe(clean_summary, use_container_width=True)
-                
-                # 상세 통계
-                if clean_detailed_stats:
-                    st.subheader("📊 깨끗한 데이터 상세 통계")
-                    
-                    col1, col2 = st.columns(2)
-                    
-                    with col1:
-                        st.write("**거래유형별 깨끗한 통계**")
-                        st.dataframe(clean_detailed_stats['거래유형_통계'], use_container_width=True)
-                    
-                    with col2:
-                        st.write("**발행형태별 깨끗한 통계**")
-                        st.dataframe(clean_detailed_stats['발행형태_통계'], use_container_width=True)
-                    
-                    st.write("**월별 깨끗한 통계**")
-                    st.dataframe(clean_detailed_stats['월별_통계'], use_container_width=True)
-            
-            # 데이터 품질 리포트
-            st.subheader("📄 데이터 품질 리포트")
-            quality_report = create_data_quality_report(df)
-            st.markdown(quality_report)
-            
-        else:
-            st.warning("데이터 품질 분석을 수행할 수 없습니다.")
+        # KPI 표시
+        col1, col2, col3, col4 = st.columns(4)
+        with col1:
+            st.metric("원본 데이터", f"{clean_stats['original_count']:,}건")
+        with col2:
+            st.metric("깨끗한 데이터", f"{clean_stats['clean_count']:,}건")
+        with col3:
+            st.metric("제거된 데이터", f"{clean_stats['removed_count']:,}건")
+        with col4:
+            st.metric("데이터 품질 점수", f"{clean_stats['quality_score']:.1f}%")
+        
+        # 시각화
+        col1, col2 = st.columns(2)
+        with col1:
+            st.plotly_chart(clean_viz[0], use_container_width=True)
+        with col2:
+            st.plotly_chart(clean_viz[1], use_container_width=True)
+        
+        # 상세 보고서
+        st.markdown("### 📋 데이터 품질 상세 보고서")
+        st.markdown(quality_report)
         
         st.markdown("""
         **📊 분석 해석:**
-        - **데이터 품질**: 이상치와 결측치를 제거한 깨끗한 데이터의 비율을 확인합니다
-        - **결측치 분석**: 각 컬럼별 결측치 현황을 파악하여 데이터 완성도를 평가합니다
-        - **이상치 분석**: IQR 방법을 사용하여 공급가액과 세액의 이상치를 탐지합니다
-        - **깨끗한 데이터 통계**: 이상치와 결측치를 제거한 후의 신뢰할 수 있는 통계를 제공합니다
-        - **데이터 품질 리포트**: 전체적인 데이터 품질 현황을 종합적으로 분석합니다
+        - 데이터 품질 점수를 통해 데이터의 신뢰성을 평가할 수 있습니다
+        - 결측치와 이상치를 제거한 후의 통계가 더 정확한 분석을 제공합니다
+        - 데이터 품질이 낮은 경우 추가적인 데이터 검증이 필요할 수 있습니다
+        """)
+    
+    with tab8:
+        st.subheader("📊 비교 분석")
+        
+        # 전년 동기 대비 분석
+        st.markdown("### 📈 전년 동기 대비 분석")
+        yoy_fig = create_year_over_year_comparison(df)
+        st.plotly_chart(yoy_fig, use_container_width=True)
+        
+        # 업종 비교 분석
+        st.markdown("### 🏭 업종 평균과 비교 분석")
+        industry_fig = create_industry_comparison(df)
+        st.plotly_chart(industry_fig, use_container_width=True)
+        
+        # 성과 지표 분석
+        st.markdown("### 📊 성과 지표 분석")
+        performance_fig, performance_metrics = create_performance_metrics(df)
+        st.plotly_chart(performance_fig, use_container_width=True)
+        
+        # 성과 지표 상세 정보
+        col1, col2 = st.columns(2)
+        with col1:
+            st.markdown("#### 💰 수익성 지표")
+            st.metric("매출총이익", f"{performance_metrics['매출총이익']:,.0f}원")
+            st.metric("매출총이익률", f"{performance_metrics['매출총이익률']:.1f}%")
+            st.metric("순이익", f"{performance_metrics['순이익']:,.0f}원")
+            st.metric("순이익률", f"{performance_metrics['순이익률']:.1f}%")
+        
+        with col2:
+            st.markdown("#### ⚡ 효율성 지표")
+            st.metric("평균 거래금액", f"{performance_metrics['평균 거래금액']:,.0f}원")
+            st.metric("거래 건수", f"{performance_metrics['거래 건수']:,}건")
+            st.metric("전자 발행 비율", f"{performance_metrics['전자 발행 비율']:.1f}%")
+        
+        st.markdown("""
+        **📊 분석 해석:**
+        - **전년 동기 대비**: 매출과 비용의 변화 추이를 통해 성장률을 분석할 수 있습니다
+        - **업종 비교**: 동종 업계 평균과 비교하여 경쟁력을 평가할 수 있습니다
+        - **수익성 지표**: 매출총이익률과 순이익률로 수익성을 분석할 수 있습니다
+        - **효율성 지표**: 거래 효율성과 디지털화 수준을 평가할 수 있습니다
         """)
 
 if __name__ == "__main__":
