@@ -1011,11 +1011,11 @@ def create_industry_comparison(df):
         '전자_발행_비율': (len(df[df['발행형태'] == '전자']) / len(df)) * 100
     }
     
-    # 업종 평균 (가상 데이터)
+    # 업종 평균 (가상 데이터) - 더 현실적인 수치로 조정
     industry_averages = {
         '소매업': {
-            '평균_거래금액': 1500000,
-            '총_거래금액': 18000000,
+            '평균_거래금액': 800000,
+            '총_거래금액': 9600000,
             '거래_건수': 12,
             '전자_발행_비율': 85
         },
@@ -1033,32 +1033,94 @@ def create_industry_comparison(df):
         }
     }
     
-    # 차트 생성
-    fig = go.Figure()
+    # 차트 생성 - 각 지표별로 별도 서브플롯 생성
+    fig = make_subplots(
+        rows=2, cols=2,
+        subplot_titles=('평균 거래금액 비교', '총 거래금액 비교', '거래 건수 비교', '전자 발행 비율 비교'),
+        specs=[[{"secondary_y": False}, {"secondary_y": False}],
+               [{"secondary_y": False}, {"secondary_y": False}]]
+    )
     
-    metrics = ['평균_거래금액', '총_거래금액', '거래_건수', '전자_발행_비율']
-    categories = ['현재', '소매업 평균', '제조업 평균', '서비스업 평균']
+    # 1. 평균 거래금액 비교
+    avg_amounts = [current_stats['평균_거래금액']]
+    for industry in ['소매업', '제조업', '서비스업']:
+        avg_amounts.append(industry_averages[industry]['평균_거래금액'])
     
-    for i, metric in enumerate(metrics):
-        values = [current_stats[metric]]
-        for industry in ['소매업', '제조업', '서비스업']:
-            values.append(industry_averages[industry][metric])
-        
-        fig.add_trace(go.Bar(
-            name=metric.replace('_', ' '),
-            x=categories,
-            y=values,
-            text=[f'{v:,.0f}' if '비율' not in metric else f'{v:.1f}%' for v in values],
+    fig.add_trace(
+        go.Bar(
+            x=['현재', '소매업', '제조업', '서비스업'],
+            y=avg_amounts,
+            name='평균 거래금액',
+            marker_color=['#1f77b4', '#ff7f0e', '#2ca02c', '#d62728'],
+            text=[f'{v:,.0f}원' for v in avg_amounts],
             textposition='auto',
-        ))
+        ),
+        row=1, col=1
+    )
+    
+    # 2. 총 거래금액 비교
+    total_amounts = [current_stats['총_거래금액']]
+    for industry in ['소매업', '제조업', '서비스업']:
+        total_amounts.append(industry_averages[industry]['총_거래금액'])
+    
+    fig.add_trace(
+        go.Bar(
+            x=['현재', '소매업', '제조업', '서비스업'],
+            y=total_amounts,
+            name='총 거래금액',
+            marker_color=['#1f77b4', '#ff7f0e', '#2ca02c', '#d62728'],
+            text=[f'{v:,.0f}원' for v in total_amounts],
+            textposition='auto',
+        ),
+        row=1, col=2
+    )
+    
+    # 3. 거래 건수 비교
+    transaction_counts = [current_stats['거래_건수']]
+    for industry in ['소매업', '제조업', '서비스업']:
+        transaction_counts.append(industry_averages[industry]['거래_건수'])
+    
+    fig.add_trace(
+        go.Bar(
+            x=['현재', '소매업', '제조업', '서비스업'],
+            y=transaction_counts,
+            name='거래 건수',
+            marker_color=['#1f77b4', '#ff7f0e', '#2ca02c', '#d62728'],
+            text=[f'{v:,}건' for v in transaction_counts],
+            textposition='auto',
+        ),
+        row=2, col=1
+    )
+    
+    # 4. 전자 발행 비율 비교
+    electronic_ratios = [current_stats['전자_발행_비율']]
+    for industry in ['소매업', '제조업', '서비스업']:
+        electronic_ratios.append(industry_averages[industry]['전자_발행_비율'])
+    
+    fig.add_trace(
+        go.Bar(
+            x=['현재', '소매업', '제조업', '서비스업'],
+            y=electronic_ratios,
+            name='전자 발행 비율',
+            marker_color=['#1f77b4', '#ff7f0e', '#2ca02c', '#d62728'],
+            text=[f'{v:.1f}%' for v in electronic_ratios],
+            textposition='auto',
+        ),
+        row=2, col=2
+    )
     
     fig.update_layout(
         title='업종 평균과 비교 분석',
-        xaxis_title='구분',
-        yaxis_title='수치',
-        height=500,
-        barmode='group'
+        height=800,
+        showlegend=False,
+        template="plotly_white"
     )
+    
+    # y축 제목 설정
+    fig.update_yaxes(title_text="금액 (원)", row=1, col=1)
+    fig.update_yaxes(title_text="금액 (원)", row=1, col=2)
+    fig.update_yaxes(title_text="건수", row=2, col=1)
+    fig.update_yaxes(title_text="비율 (%)", row=2, col=2)
     
     return fig
 
