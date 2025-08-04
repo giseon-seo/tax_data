@@ -735,7 +735,7 @@ def create_clean_data_analysis(df):
     이상치와 결측치를 제외한 깨끗한 데이터 분석
     """
     if df is None or df.empty:
-        return None, None, None
+        return {}
     
     # 결측치 확인
     missing_data = df.isnull().sum()
@@ -762,43 +762,15 @@ def create_clean_data_analysis(df):
     
     # 깨끗한 데이터 통계
     clean_stats = {
-        '원본_데이터_수': len(df),
-        '깨끗한_데이터_수': len(clean_df),
-        '제거된_데이터_수': len(df) - len(clean_df),
-        '데이터_품질_비율': (len(clean_df) / len(df)) * 100 if len(df) > 0 else 0,
-        '결측치_비율': missing_percentage.sum(),
-        '이상치_비율': ((supply_outliers | tax_outliers).sum() / len(df)) * 100 if len(df) > 0 else 0
+        'original_count': len(df),
+        'clean_count': len(clean_df),
+        'removed_count': len(df) - len(clean_df),
+        'quality_score': (len(clean_df) / len(df)) * 100 if len(df) > 0 else 0,
+        'missing_percentage': missing_percentage.sum(),
+        'outlier_percentage': ((supply_outliers | tax_outliers).sum() / len(df)) * 100 if len(df) > 0 else 0
     }
     
-    # 깨끗한 데이터 기반 통계
-    if len(clean_df) > 0:
-        clean_summary = clean_df.describe()
-        
-        # 거래유형별 깨끗한 통계
-        clean_type_stats = clean_df.groupby('거래유형').agg({
-            '공급가액': ['count', 'sum', 'mean', 'std', 'min', 'max'],
-            '세액': ['sum', 'mean', 'std', 'min', 'max']
-        }).round(0)
-        
-        # 발행형태별 깨끗한 통계
-        clean_form_stats = clean_df.groupby('발행형태').agg({
-            '공급가액': ['count', 'sum', 'mean', 'std'],
-            '세액': ['sum', 'mean', 'std']
-        }).round(0)
-        
-        # 월별 깨끗한 통계
-        clean_monthly_stats = clean_df.groupby('작성월').agg({
-            '공급가액': ['count', 'sum', 'mean'],
-            '세액': ['sum', 'mean']
-        }).round(0)
-        
-        return clean_stats, clean_summary, {
-            '거래유형_통계': clean_type_stats,
-            '발행형태_통계': clean_form_stats,
-            '월별_통계': clean_monthly_stats
-        }
-    else:
-        return clean_stats, None, None
+    return clean_stats
 
 def create_clean_data_visualization(df):
     """
